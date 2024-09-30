@@ -1,5 +1,5 @@
 <template>
-  <div class="content-section">
+  <div class="content-section md:ml-64">
     <div class="flex flex-col md:flex-row justify-between mb-4 border-b pb-5">
       <div>
         <h2 class="text-xl md:text-2xl font-bold ">Manage Contacts</h2>

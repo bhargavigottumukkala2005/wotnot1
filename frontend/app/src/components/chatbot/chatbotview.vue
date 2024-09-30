@@ -22,7 +22,7 @@
           </div>
           <div>
             <i class="fas fa-user-circle"></i>
-            <h5 id="chatTitle">{{ chatTitle }} <br> Available</h5>
+            <h6 id="chatTitle">{{ chatTitle }} <br> <span class="available-text">Available</span></h6>
           </div>
           <select id="userDropdown" @change="selectUser">
             <option value="" disabled selected>Select User</option>
@@ -80,17 +80,7 @@
           </tbody>
         </table>
   
-        <div class="tags">
-          <h4>Tags</h4>
-          <input type="text" v-model="newTag" placeholder="Add a tag" />
-          <button @click="addTag">Add Tag</button>
-          <ul>
-            <li v-for="(tag, index) in tags" :key="tag">
-              {{ tag }}
-              <button @click="removeTag(index)">x</button>
-            </li>
-          </ul>
-        </div>
+        
       </div>
     </div>
   </template>
@@ -223,15 +213,7 @@
           chatContent.scrollTop = chatContent.scrollHeight;
         }
       },
-      addTag() {
-        if (this.newTag.trim()) { // Ensure non-empty tag
-          this.tags.push(this.newTag);
-          this.newTag = '';
-        }
-      },
-      removeTag(index) {
-        this.tags.splice(index, 1);
-      }
+
     }
   };
   </script>
@@ -292,14 +274,18 @@
   }
   
   .chat-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #075E54;
-    color: #075E54;
-    padding: 10px;
-    border-radius: 5px;
-  }
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  background-color: #f8f9fa;
+  width: 100%; /* Make sure it occupies the full width of the container */
+  max-width: 100%; /* Remove any width restrictions if necessary */
+  box-sizing: border-box;
+  border-bottom: 1px solid #ccc; /* Optional: add a bottom border */
+  height:105px;
+}
+
   
   .status {
     color: #4caf50;
@@ -383,6 +369,7 @@
     padding: 1px;
     border: 1px solid #ccc;
     border-radius: 10px;
+    width:30%;
   }
   
   /* Optional: Change text color for options */
@@ -609,7 +596,11 @@
   .contact-table th {
       background-color: #f2f2f2;
   }
-  
+  .available-text {
+  font-size: 12px;  /* Adjust the size as needed */
+  color: #ffffff;   
+  top:2px;   /* Optional: Change color if needed */
+}
   
   
   </style>
