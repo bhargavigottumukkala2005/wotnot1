@@ -10,7 +10,7 @@
         <div class="logo"> WotNot</div>
         <div class="nav-item" v-for="section in navItems" :key="section.name" @click="navigate(section.path)"
           :class="{ active: isActive(section.path)}">
-          <i :class="section.icon"></i>{{ section.label }}
+          <i :class="section.icon"></i>{{ section.label }}        
         </div>
       </div>
 
@@ -123,8 +123,14 @@
           Integration
         </a>
       </div>
+  <!--    <div v-if="currentSection === 'Chatbot'" class="flex-1 mt-16 p-8 bg-white overflow-y-auto h-[calc(100vh-65px)]">
+  <router-view></router-view>
+</div>-->
+<!--<ActiveChatsSidebar v-if="currentSection === 'Chatbot'" class="fixed top-12 left-0 w-64 h-[calc(100vh-65px)] bg-gray-100 p-4 overflow-y-auto mt-4 z-50 transform md:transform-none transition-transform duration-300 ease-in-out" :class="{ '-translate-x-full': !isMenuOpen, 'translate-x-0': isMenuOpen }" />-->
 
-      <!-- Main Content -->
+
+
+      <!-- Main Content-->
       <div class="flex-1 mt-16 md:ml-64 p-8 bg-white overflow-y-auto h-[calc(100vh-65px)] ">
         <router-view></router-view>
       </div>
@@ -154,7 +160,8 @@ export default {
       navItems: [
         { name: 'broadcast', label: 'Broadcast', icon: 'bi bi-broadcast', path: '/broadcast/broadcast2' },
         { name: 'Contacts', label: 'Contacts', icon: 'bi bi-person-video2', path: '/contacts/contacts1' },
-        { name: 'Integration', label: 'Integration', icon: 'bi bi-plugin', path: '/integration/integration1' }
+        { name: 'Integration', label: 'Integration', icon: 'bi bi-plugin', path: '/integration/integration1' },
+        { name: 'chatbot', label: 'Chatbot', path: '/chatbot/chatbotview', icon: 'bi bi-robot' }
       ],
       user: null,
       dropdownOpen: false,
@@ -316,6 +323,7 @@ function getSectionFromRoute(path) {
   if (path.startsWith('/broadcast')) return 'broadcast';
   if (path.startsWith('/contacts')) return 'Contacts';
   if (path.startsWith('/integration')) return 'Integration';
+  if (path.startsWith('/chatbot')) return 'Chatbot'; // Add this line
   return 'broadcast';
 }
 </script>
@@ -621,10 +629,3 @@ button:hover {
 }
 
 </style>
-
-
-
-
-
-
-
