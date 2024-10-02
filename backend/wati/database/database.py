@@ -6,7 +6,7 @@ from fastapi import Depends
 
 
 
-SQLALCHEMY_DATABASE_URL = 'postgresql://postgres:12345@localhost/wotnot4'
+SQLALCHEMY_DATABASE_URL = 'postgresql://postgres:12345@localhost/wotnot6'
 
 
 

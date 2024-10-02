@@ -12,6 +12,13 @@ module.exports = {
       fontSize: {
         'custom-small': '0.780rem', // Custom font size
       },
+      color:
+      {
+'whatsapp-green': '#075E54'
+     },
+     strokeWidth: {
+      '5': '5', // Adds a stroke-width of 5
+    },
       
     },
   },

@@ -740,8 +740,8 @@ export default {
 
       // Assuming recipients have both name and number in format 'Name:1234567890'
       const contacts = this.recipients.split(',').map(entry => {
-        const [name, phone] = entry.split(':').map(item => item.trim());
-        return { name, phone };
+        const phone = entry.trim();
+        return { name: name, phone };
       });
 
       const Template = this.templates.find(template => template.id === this.selectedTemplateId);
@@ -846,8 +846,8 @@ export default {
     async scheduleBroadcast2() {
 
       const contacts = this.recipients.split(',').map(entry => {
-        const [name, phone] = entry.split(':').map(item => item.trim());
-        return { name, phone };
+        const phone = entry.trim();
+        return { name:phone , phone };
       });
 
 
