@@ -1,9 +1,11 @@
 from fastapi import APIRouter,Depends,HTTPException, File, UploadFile,Request
-from ..models import Broadcast,Contacts
-from ..Schemas import broadcast,user
+from ..models import Broadcast,Contacts,User,chat
+from ..Schemas import broadcast,user,chat
 from ..database import database
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,joinedload
+from datetime import datetime,timedelta
+ # Import your models
+from ..database import database
 from pydantic import BaseModel
 import requests
 import json
@@ -13,6 +15,7 @@ import io
 from ..oauth2 import get_current_user
 from dramatiq import get_broker
 import asyncio
+from twilio.rest import Client
 
 from ..crud.template import send_template_to_whatsapp
 
@@ -21,13 +24,17 @@ from starlette.responses import PlainTextResponse
 from ..oauth2 import get_current_user
 from ..crud.template import send_template_to_whatsapp# Replace with your actual WhatsApp Business API endpoint and token
 import logging
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+
+
 
 # Replace with your actual WhatsApp Business API endpoint and token
 
 
 router=APIRouter( tags=['Broadcast'])
 
-WEBHOOK_VERIFY_TOKEN = "12345"  # Replace with your verification token
+WEBHOOK_VERIFY_TOKEN = "56789"  # Replace with your verification token
 
 # Meta Webhook verification endpoint
 @router.get("/meta-webhook")
@@ -45,80 +52,69 @@ async def verify_webhook(request: Request):
 # Webhook event listener to receive message status updates
 
 
+def is_active(last_active_time):
+    """ Check if the last active time is within the last 24 hours. """
+    if last_active_time is None:
+        return False
+    # Check if the last active time is less than 24 hours from now
+    return (datetime.utcnow() + timedelta(hours=5, minutes=30) - last_active_time) < timedelta(days=1)
+
 @router.post("/meta-webhook")
 async def receive_meta_webhook(request: Request, db: Session = Depends(database.get_db)):
     try:
-        # Parse the incoming webhook request
         body = await request.json()
-        print(body)
-
-        # Ensure 'entry' exists in the body
+        
         if "entry" not in body:
             raise HTTPException(status_code=400, detail="Invalid webhook format")
 
-        # Process each entry
         for event in body["entry"]:
             if "changes" not in event:
                 raise HTTPException(status_code=400, detail="Missing 'changes' key in entry")
             
-            # Iterate through each change
             for change in event["changes"]:
                 if "value" not in change:
                     raise HTTPException(status_code=400, detail="Missing 'value' key in changes")
 
                 value = change["value"]
 
-                # Handle messages (replies)
                 if "statuses" in value:
                     for status in value["statuses"]:
-                        # Check if the necessary keys exist
                         if "recipient_id" not in status or "id" not in status or "status" not in status or "timestamp" not in status:
                             raise HTTPException(status_code=400, detail="Missing keys in statuses")
 
-                        
                         message_status = status["status"]
-                        wamid=status['id']
+                        wamid = status['id']
 
-                        message_read=False
-                        message_delivered=False
-                        message_sent=False
+                        message_read = message_delivered = message_sent = False
 
-                        
-                        if(message_status=="read"):
-                            message_read=True
-                            message_delivered=True
-                            message_sent=True
-                            
-                        
-                        if(message_status=="delivered"):
-                            message_read=False
-                            message_delivered=True
-                            message_sent=True
-                            
-
-
-                        if(message_status=="sent"):
-                            message_read=False
-                            message_delivered=False
-                            message_sent=True
-                            
-
-
+                        if message_status == "read":
+                            message_read = True
+                            message_delivered = True
+                            message_sent = True
+                        elif message_status == "delivered":
+                            message_delivered = True
+                            message_sent = True
+                        elif message_status == "sent":
+                            message_sent = True
 
                         broadcast_report = (
-                                db.query(Broadcast.BroadcastAnalysis)
-                                .filter( Broadcast.BroadcastAnalysis.message_id==wamid)
-                                .first()
-                            )
+                            db.query(Broadcast.BroadcastAnalysis)
+                            .filter(Broadcast.BroadcastAnalysis.message_id == wamid)
+                            .first()
+                        )
                         
                         if not broadcast_report:
-                                raise HTTPException(status_code=404,detail="Broadcast not found")
+                            raise HTTPException(status_code=404, detail="Broadcast not found")
 
                         if wamid:
-                                broadcast_report.read=message_read
-                                broadcast_report.delivered=message_delivered
-                                broadcast_report.sent=message_sent
-                                broadcast_report.status=message_status
+                            broadcast_report.read = message_read
+                            broadcast_report.delivered = message_delivered
+                            broadcast_report.sent = message_sent
+                            broadcast_report.status = message_status
+                            # Update last active time in IST
+                            broadcast_report.last_active_time = datetime.utcnow() + timedelta(hours=5, minutes=30)
+                            # Set active status based on last active time
+                            broadcast_report.active = is_active(broadcast_report.last_active_time)
 
                         db.add(broadcast_report)
                         db.commit()
@@ -126,34 +122,31 @@ async def receive_meta_webhook(request: Request, db: Session = Depends(database.
                 
                 elif "messages" in value:
                     for message in value["messages"]:
-
-                        message_reply=True
-                        message_status='replied'
+                        message_reply = True
+                        message_status = 'replied'
                          
-                        wamid=message['context']['id']
+                        wamid = message['context']['id']
                         broadcast_report = (
-                                db.query(Broadcast.BroadcastAnalysis)
-                                .filter( Broadcast.BroadcastAnalysis.message_id==wamid)
-                                .first()
-                            )
+                            db.query(Broadcast.BroadcastAnalysis)
+                            .filter(Broadcast.BroadcastAnalysis.message_id == wamid)
+                            .first()
+                        )
                         
                         if not broadcast_report:
-                                raise HTTPException(status_code=404,detail="Broadcast not found")
+                            raise HTTPException(status_code=404, detail="Broadcast not found")
 
                         if wamid:
-                                broadcast_report.replied=message_sent=message_reply
-                                broadcast_report.status=message_status
+                            broadcast_report.replied = message_sent = message_reply
+                            broadcast_report.status = message_status
+                            # Update last active time in IST
+                            broadcast_report.last_active_time = datetime.utcnow() + timedelta(hours=5, minutes=30)
+                            # Set active status based on last active time
+                            broadcast_report.active = is_active(broadcast_report.last_active_time)
 
                         db.add(broadcast_report)
                         db.commit()
                         db.refresh(broadcast_report) 
 
-                         
-                         
-
-      
-
-                       
         return {"status": "ok"}
 
     except KeyError as e:
@@ -163,9 +156,105 @@ async def receive_meta_webhook(request: Request, db: Session = Depends(database.
         logging.error(f"Error processing webhook: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
+def normalize_contacts_phone_numbers(db: Session):
+    # Update query to remove both '+' and spaces from phone numbers
+    db.execute(text("UPDATE contacts SET phone = REPLACE(REPLACE(phone, '+', ''), ' ', '')"))
+    db.commit()
+
+@router.get("/api/chats", response_model=list[chat.ChatResponse])
+async def get_active_chats(db: Session = Depends(database.get_db)):
+    try:
+        # Query to get active broadcasts along with associated contacts
+        active_broadcasts = (
+            db.query(Broadcast.BroadcastAnalysis)
+            .filter(Broadcast.BroadcastAnalysis.active == True)
+            .options(joinedload(Broadcast.BroadcastAnalysis.contact))  # Eager load contact data
+            .all()
+        )
+
+        # Debugging output
+        print("Active broadcasts fetched from DB:", active_broadcasts)
+
+        chats = []
+        for broadcast in active_broadcasts:
+            contact_details = {
+                "name": broadcast.contact.name if broadcast.contact else "Unknown",
+                "email": broadcast.contact.email if broadcast.contact and broadcast.contact.email else "No email available",
+                "phone": broadcast.contact.phone if broadcast.contact and broadcast.contact.phone else "No phone available"
+            }
+
+            latest_message = f"Message sent to {contact_details['name']}"
+
+            chats.append({
+                "message_id": broadcast.message_id,
+                "status": broadcast.status,
+                "latest_message": latest_message,
+                "is_active": True,
+                "contact_details": contact_details
+            })
+
+        return chats
+    except Exception as e:
+        print("Error fetching active chats:", str(e))  # Additional error logging
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/active-chats", response_model=list[chat.ChatResponse])
+async def active_chats(db: Session = Depends(database.get_db)):
+    return await get_active_chats(db)  # Await the coroutine properly
 
 
 
+# Function to send message via Twilio
+def send_sms(to_number, message):
+    account_sid = 'your_twilio_account_sid'
+    auth_token = 'your_twilio_auth_token'
+    twilio_number = 'your_twilio_phone_number'
+
+    client = Client(account_sid, auth_token)
+    client.messages.create(
+        body=message,
+        from_=twilio_number,
+        to=to_number
+    )
+
+@router.post("/api/send-message")
+async def send_message(
+    message_request: chat.MessageRequest, 
+    db: Session = Depends(database.get_db), 
+    current_user: User.User = Depends(get_current_user)
+):
+    # Validate chat existence
+    chat = db.query(chat.Chat).filter(chat.Chat.message_id == message_request.chat_id).first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    # Validate user permission
+    if chat.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    # Create new message
+    new_message = chat.Message(
+        chat_id=message_request.chat_id,
+        text=message_request.message,
+        sender_id=current_user.id
+    )
+
+    # Add message to database
+    db.add(new_message)
+    db.commit()
+
+    # Update latest message in chat
+    chat.latest_message = message_request.message
+    db.commit()
+
+    # Send message to phone number using Twilio
+    try:
+        send_sms(message_request.phone_number, message_request.message)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error sending SMS: {str(e)}")
+
+    return {"message": "Message sent successfully"}
 # Broadcast 2 routes
 
 # test

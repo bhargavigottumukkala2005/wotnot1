@@ -1,222 +1,171 @@
 <template>
-    <div id="app" class="main-container">
-      <!-- Sidebar for Active Chats -->
-      <div class="sidebar">
-        <b><h2>Active Chats</h2></b>
-        <ul class="chat-list">
-          <li v-for="chat in chats" :key="chat.id">
-            <a @click="loadChat(chat.id)">{{ chat.name }}</a>
-          </li>
-        </ul>
+  <div id="app" class="main-container">
+    <!-- Sidebar for Active Chats -->
+    <div class="sidebar">
+  <b><h2>Active Chats</h2></b>
+  <ul class="chat-list">
+    <li v-for="chat in chats" :key="chat.message_id">
+      <a @click="loadChat(chat.message_id)">
+        {{ chat.contact_details.name }} ({{ chat.contact_details.phone }})
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+    <!-- Chat Area -->
+    <div class="chat-area">
+      <div class="chat-header">
+        <div class="timer">
+          <svg width="60" height="60">
+            <circle cx="30" cy="30" r="25" stroke="white" stroke-width="5" fill="none"></circle>
+            <circle id="progressCircle" class="progress-circle" cx="30" cy="30" r="25" stroke-dasharray="157.08" :stroke-dashoffset="progressSeconds" />
+          </svg>
+          <span id="currentTime">{{ currentTime }}</span>
+        </div>
+        <div>
+          <i class="fas fa-user-circle"></i>
+          <h6 id="chatTitle">{{ chatTitle }} <br> <span class="available-text">Available</span></h6>
+        </div>
+        <select id="userDropdown" @change="selectUser">
+          <option value="" disabled selected>Select User</option>
+          <option v-for="chat in chats" :key="chat.message_id" :value="chat.message_id">{{ chat.contact_details.name }}</option>
+        </select>
       </div>
-  
-      <!-- Chat Area -->
-      <div class="chat-area">
-        <div class="chat-header">
-          <div class="timer">
-            <svg width="60" height="60">
-              <circle cx="30" cy="30" r="25" stroke="white" stroke-width="5" fill="none"></circle>
-              <circle id="progressCircle" class="progress-circle" cx="30" cy="30" r="25" stroke-dasharray="157.08" :stroke-dashoffset="progressSeconds" />
-            </svg>
-            <span id="currentTime">{{ currentTime }}</span>
+
+      <div class="chat-content" id="chatContent">
+        <div v-html="chatContent"></div>
+        <div id="messages">
+          <div v-for="message in messages" :key="message.id" class="message">
+            <p class="user-message">{{ message.text }}</p>
           </div>
-          <div>
-            <i class="fas fa-user-circle"></i>
-            <h6 id="chatTitle">{{ chatTitle }} <br> <span class="available-text">Available</span></h6>
-          </div>
-          <select id="userDropdown" @change="selectUser">
-            <option value="" disabled selected>Select User</option>
-            <option v-for="chat in chats" :key="chat.id" :value="chat.id">{{ chat.name }}</option>
-          </select>
-        </div>
-  
-        <div class="chat-content" id="chatContent">
-          <div v-html="chatContent"></div>
-          <div id="messages">
-            <div v-for="message in messages" :key="message.id" class="message">
-              <p class="user-message">{{ message.text }}</p>
-            </div>
-          </div>
-        </div>
-  
-        <!-- Message Input Area -->
-        <div class="message-input-area">
-          <input type="text" v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type a message..." />
-  
-          <!-- Upload Symbol for File Input -->
-          <label for="file-upload" class="upload-label">
-            <i class="fas fa-paperclip"></i>
-          </label>
-          <input type="file" id="file-upload" @change="handleFileUpload" class="file-input" />
-  
-          <!-- Send Button -->
-          <button @click="sendMessage">Send</button>
         </div>
       </div>
-  
-      <!-- Contact Information -->
-      <div class="contact-info">
-        <h3>{{ contactInfo.name }}</h3>
-        <p><strong>Phone Number:</strong> {{ contactInfo.phone }}</p>
-        <h4>Contact Attributes</h4>
-        <table class="contact-table">
-          <tbody>
-            <tr>
-              <td><strong>Email:</strong></td>
-              <td>{{ contactInfo.email }}</td>
-            </tr>
-            <tr>
-              <td><strong>Created at:</strong></td>
-              <td>{{ contactInfo.created }}</td>
-            </tr>
-            <tr>
-              <td><strong>Segment:</strong></td>
-              <td>{{ contactInfo.segment }}</td>
-            </tr>
-            <tr>
-              <td><strong>Campaign:</strong></td>
-              <td>{{ contactInfo.campaign }}</td>
-            </tr>
-          </tbody>
-        </table>
-  
-        
+
+      <!-- Message Input Area -->
+      <div class="message-input-area">
+        <input type="text" v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type a message..." />
+        <label for="file-upload" class="upload-label">
+          <i class="fas fa-paperclip"></i>
+        </label>
+        <input type="file" id="file-upload" @change="handleFileUpload" class="file-input" />
+        <button @click="sendMessage">Send</button>
       </div>
     </div>
-  </template>
-  
-  
-  <script>
-  export default {
-    name: 'ChatbotView',
-    data() {
-      return {
-        chats: [
-          { id: 'goutam', name: 'Goutam Giri' },
-          { id: 'ramanaan', name: 'Ramanaan' },
-          { id: 'sheetal', name: 'Sheetal Balsaraf' },
-          { id: 'ah', name: 'AH' }
-        ],
-        chatTitle: "",
-        chatContent: "",
-        contactInfo: {},
-        messages: [],
-        newMessage: "",
-        tags: [],
-        newTag: "",
-        currentTime: "",
-        progressSeconds: 0,
-        chatData: {
-          goutam: {
-            title: "Goutam Giri",
-            content: `<p><strong>Link:</strong> <a href="#">(link unavailable)...</a></p> <p><strong>Meeting ID:</strong> 897 9399 5199</p> <p><strong>Passcode:</strong> 3456</p> <p>No replays<br>No recordings<br>4.6+ Trustpilot, 1250+ reviews, 36000+ community</p> <p>Best, <br>Pixelltests, Founded by alumni of IIT-Madras</p>`,
-            contact: {
-              name: "Goutam Giri",
-              phone: "+919646138499",
-              email: "gg968466@gmail.com",
-              created: "2024-07-07",
-              segment: "14 Jul 2024 AI Hit1",
-              campaign: "jay-white-aicareer"
-            }
-          },
-          ramanaan: {
-            title: "Ramanaan",
-            content: `<p><strong>Link:</strong> <a href="#">(link unavailable)...</a></p> <p><strong>Promo Code:</strong> 12345</p> <p>Best, <br>Ramanaan Team</p>`,
-            contact: {
-              name: "Ramanaan",
-              phone: "+919876543210",
-              email: "ramanaan@example.com",
-              created: "2023-05-01",
-              segment: "25 Dec 2023 Promo Hit",
-              campaign: "holiday-promo-2023"
-            }
-          },
-          sheetal: {
-            title: "Sheetal Balsaraf",
-            content: `<p>Sheetal requested info for upcoming classes</p>`,
-            contact: {
-              name: "Sheetal Balsaraf",
-              phone: "+911234567890",
-              email: "sheetal@example.com",
-              created: "2023-09-20",
-              segment: "Education Inquiry",
-              campaign: "education-leads-2024"
-            }
-          },
-          ah: {
-            title: "AH",
-            content: `<p>AH asked about the process and needs details.</p>`,
-            contact: {
-              name: "AH",
-              phone: "+919098765432",
-              email: "ah@example.com",
-              created: "2023-11-05",
-              segment: "Support Inquiry",
-              campaign: "support-q4-2023"
-            }
-          }
-        }
-      };
-    },
-    mounted() {
-      this.updateCurrentTime();
-      setInterval(() => this.updateCurrentTime(), 1000); // Binding context
-    },
-    methods: {
-      updateCurrentTime() {
-        const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        this.currentTime = `${hours}:${minutes}`;
-        this.updateProgressBar(now.getSeconds());
-      },
-      updateProgressBar(seconds) {
-        const circumference = 125.66;
-        const offset = circumference - (circumference * (seconds / 60));
-        this.progressSeconds = offset;
-      },
-      loadChat(chatId) {
-        const chat = this.chatData[chatId];
-        if (chat) { // Check if chat exists
-          this.chatTitle = chat.title;
-          this.chatContent = chat.content;
-          this.contactInfo = chat.contact;
-          this.messages = [];
-          this.updateMessages();
-        } else {
-          console.error(`Chat with ID "${chatId}" not found.`);
-        }
-      },
-      selectUser(event) {
-        const selectedUser = event.target.value;
-        if (selectedUser) {
-          this.loadChat(selectedUser);
-        }
-      },
-      sendMessage() {
-        if (this.newMessage.trim()) { // Ensure non-empty message
-          this.messages.push({ id: this.messages.length, text: this.newMessage });
-          this.newMessage = '';
-          this.updateMessages();
-        }
-      },
-      handleFileUpload(event) {
-        const file = event.target.files[0];
-        if (file) {
-          console.log(`Uploaded file: ${file.name}`);
-          // Handle file processing here (e.g., display or send to backend)
-        }
-      },
-      updateMessages() {
-        const chatContent = document.getElementById('chatContent');
-        if (chatContent) { // Ensure chatContent exists
-          chatContent.scrollTop = chatContent.scrollHeight;
-        }
-      },
 
-    }
-  };
-  </script>
+    <!-- Contact Information -->
+    <div class="contact-info">
+      <h3>{{ contactInfo.name }}</h3>
+      <p><strong>Phone Number:</strong> {{ contactInfo.phone }}</p>
+      <h4>Contact Attributes</h4>
+      <table class="contact-table">
+        <tbody>
+          <tr>
+            <td><strong>Email:</strong></td>
+            <td>{{ contactInfo.email }}</td>
+          </tr>
+          <tr>
+            <td><strong>Created at:</strong></td>
+            <td>{{ contactInfo.created }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'ChatbotView',
+  data() {
+    return {
+      chats: [],
+      chatTitle: "",
+      chatContent: "",
+      contactInfo: {},
+      messages: [],
+      newMessage: "",
+      currentTime: "",
+      progressSeconds: 0,
+    };
+  },
+  mounted() {
+    this.fetchActiveChats().catch((error) => {
+      console.error("Error fetching active chats:", error);
+    });
+    this.updateCurrentTime();
+    setInterval(() => this.updateCurrentTime(), 1000);
+  },
+  methods: {
+    async fetchActiveChats() {
+      try {
+        const response = await fetch("http://localhost:8000/api/chats");
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        // Remove duplicates based on phone number
+        const uniqueChats = [];
+        const phoneNumbers = new Set();
+        data.forEach((chat) => {
+          if (!phoneNumbers.has(chat.contact_details.phone)) {
+            phoneNumbers.add(chat.contact_details.phone);
+            uniqueChats.push(chat);
+          }
+        });
+        
+        this.chats = uniqueChats;
+      } catch (error) {
+        console.error("Error fetching active chats:", error);
+      }
+    },
+    updateCurrentTime() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      this.currentTime = `${hours}:${minutes}`;
+      this.updateProgressBar(now.getSeconds());
+    },
+    updateProgressBar(seconds) {
+      const circumference = 125.66;
+      const offset = circumference - (circumference * (seconds / 60));
+      this.progressSeconds = offset;
+    },
+    loadChat(chatId) {
+      const chat = this.chats.find(chat => chat.message_id === chatId);
+      if (chat) {
+        this.chatTitle = `Chat with ${chat.contact_details.name}`;
+        this.contactInfo = chat.contact_details;
+        this.chatContent = chat.latest_message;
+        this.messages = [];
+      } else {
+        console.error(`Chat with ID "${chatId}" not found.`);
+      }
+    },
+    selectUser(event) {
+      const selectedUser = event.target.value;
+      if (selectedUser) {
+        this.loadChat(selectedUser);
+      }
+    },
+    sendMessage() {
+      if (this.newMessage.trim()) {
+        this.messages.push({ id: this.messages.length, text: this.newMessage });
+        this.newMessage = '';
+      }
+    },
+    // handleFileUpload(event) {
+    // Handle file upload logic here
+    // }
+  }
+};
+</script>
+
+
+
+
+
   <style scoped>
   /* Main container layout */
   .main-container {

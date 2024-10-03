@@ -1,6 +1,6 @@
 from ..database import database
 from sqlalchemy import Integer,Column,String,BigInteger,TIMESTAMP,func
-
+from sqlalchemy.orm import relationship
 
 # user model
 
@@ -18,3 +18,5 @@ class User(database.Base):
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     api_key=Column(String ,unique=True)
     paid_amount = Column(Integer, default=0)
+    
+    chats = relationship("Chat", back_populates="user")  # One-to-many relationship
